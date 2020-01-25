@@ -51,10 +51,10 @@
          );
        }else {
          return array(
-           "status"=>true,
-           "rowCount"=>$run->rowCount(),
-           "lastInsertId"=>$this->dbHandler->lastInsertId(),
-           "data"=>$run
+           "status"=>false,
+           "rowCount"=>null,
+           "lastInsertId"=>null,
+           "data"=>null
          );
        }
      }
@@ -95,7 +95,7 @@
                   "status"=>$run,
                   "rowCount"=>$statement->rowCount(),
                   "lastInsertId"=>$this->dbHandler->lastInsertId(),
-                  "data"=>$run
+                  "data"=>$statement
                 );
               }else {
                 return array (
