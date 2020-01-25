@@ -47,7 +47,7 @@
            "status"=>true,
            "rowCount"=>$run->rowCount(),
            "lastInsertId"=>$this->dbHandler->lastInsertId(),
-           "data"=>$run
+           "data"=>$run->fetchAll()
          );
        }else {
          return array(
@@ -95,7 +95,7 @@
                   "status"=>$run,
                   "rowCount"=>$statement->rowCount(),
                   "lastInsertId"=>$this->dbHandler->lastInsertId(),
-                  "data"=>$statement
+                  "data"=>$statement->fetchAll()
                 );
               }else {
                 return array (
@@ -166,3 +166,4 @@
         }
      }
    }
+?>
