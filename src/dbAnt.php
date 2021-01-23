@@ -47,14 +47,14 @@
            "status"=>true,
            "rowCount"=>$run->rowCount(),
            "lastInsertId"=>$this->dbHandler->lastInsertId(),
-           "data"=>$run->fetchAll()
+           "data"=>$run
          );
        }else {
          return array(
-           "status"=>false,
-           "rowCount"=>null,
-           "lastInsertId"=>null,
-           "data"=>null
+           "status"=>true,
+           "rowCount"=>$run->rowCount(),
+           "lastInsertId"=>$this->dbHandler->lastInsertId(),
+           "data"=>$run
          );
        }
      }
@@ -64,7 +64,7 @@
            throw new Exception("method argument 1 must be a string");
          }
        } catch (\Exception $e) {
-         die(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+         trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
        }
 
        if($this->isPrepared($query)){
@@ -95,7 +95,7 @@
                   "status"=>$run,
                   "rowCount"=>$statement->rowCount(),
                   "lastInsertId"=>$this->dbHandler->lastInsertId(),
-                  "data"=>$statement->fetchAll()
+                  "data"=>$run
                 );
               }else {
                 return array (
@@ -108,7 +108,7 @@
              }
            }
          } catch (\Exception $e) {
-           die(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+           trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
          }
        }else {
          return $this->runDirectQuery($query);
@@ -120,7 +120,7 @@
             throw new Exception("method argument 1 must be a string");
           }
         } catch (\Exception $e) {
-          die(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+          trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
         }
 
         if($this->isPrepared($query)){
@@ -130,7 +130,8 @@
               throw new Exception("method argument 2 must be an array");
             }else {
               //Check if array is multi dimensional
-              for($x=0; $x<count($arrayOfValues); $x++){
+              $total = count($arrayOfValues);
+              for($x=0; $x<$total; $x++){
                 if (!is_array($arrayOfValues[$x])){// Array not passed
                   throw new Exception("method argument 2 must be a 2 dimensional array of parent being index array");
                 }
@@ -154,16 +155,28 @@
                  $statement = $this->dbHandler->prepare($query);
                  //batch run prepared here
 
-                 for ($x=0; $x<count($arrayOfValues); $x++){
+                 $total = count($arrayOfValues);
+                 for ($x=0; $x<$total; $x++){
                    $run = $statement->execute($arrayOfValues[$x]);
                  }
-                 return true;
+                 return array("status" => true);
               }
             }
           } catch (\Exception $e) {
-            die(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+            trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
           }
         }
      }
+     public function startTransaction(){
+      $this->dbHandler->beginTransaction();
+     }
+     public function endTransaction(){
+      $this->dbHandler->commit();
+     }
+     public function commit(){
+      $this->dbHandler->commit();
+     }
+     public function rollBack(){
+      $this->dbHandler->rollBack();
+     }
    }
-?>
