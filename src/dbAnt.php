@@ -167,6 +167,10 @@
           }
         }
      }
+     public function exist($query, $value){
+       $status = $this->run($query, [$value]);
+       return (int) $status["rowCount"] == 1?true:false;
+     }
      public function startTransaction(){
       $this->dbHandler->beginTransaction();
      }
