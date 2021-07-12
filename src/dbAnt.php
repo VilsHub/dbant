@@ -1,19 +1,19 @@
 <?php
-  namespace vilshub\dbant;
-  use vilshub\helpers\message;
+  namespace vilshub\DBAnt;
+  use vilshub\helpers\Message;
+  use vilshub\helpers\Get;
   use \Exception;
-  use vilshub\helpers\get;
-  use vilshub\helpers\style;
-  use vilshub\helpers\textProcessor;
+  use vilshub\helpers\Style;
+  use vilshub\helpers\TextProcessor;
   /**
    *
    */
    /**
     *
     */
-   class dbAnt
+   class DBAnt
    {
-     function __construct($dbHandler){
+     function __construct(\PDO $dbHandler){
        $this->dbHandler = $dbHandler;
      }
      private $dbHandler;
@@ -64,11 +64,13 @@
            throw new Exception("method argument 1 must be a string");
          }
        } catch (\Exception $e) {
-         trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+         trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
        }
 
        if($this->isPrepared($query)){
+         
          $preparedData = $this->preparedInfo($query);
+         
          try {
            if (!is_array($values)){// Array not passed
              throw new Exception("method argument 2 must be an array");
@@ -108,7 +110,7 @@
              }
            }
          } catch (\Exception $e) {
-           trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+           trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
          }
        }else {
          return $this->runDirectQuery($query);
@@ -120,7 +122,7 @@
             throw new Exception("method argument 1 must be a string");
           }
         } catch (\Exception $e) {
-          trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+          trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
         }
 
         if($this->isPrepared($query)){
@@ -163,7 +165,7 @@
               }
             }
           } catch (\Exception $e) {
-            trigger_error(message::write("error", get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+            trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
           }
         }
      }
