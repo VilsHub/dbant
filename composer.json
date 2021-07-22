@@ -1,6 +1,7 @@
 {
     "name": "vilshub/dbant",
-    "type": "library for database IO",
+    "type": "library",
+    "description":"dbAnt is a PHP library for database IO, used in zion light framework",
     "license": "MIT",
     "authors": [
         {

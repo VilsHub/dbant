@@ -1,5 +1,5 @@
 # dbAnt Overview
-dbAnt is PHP library for database IO. As of this version 1.0.0, it supports only PHP PDO extension.
+dbAnt is a PHP library for database IO, used in zion light framework
 
 ## Requirements
 
