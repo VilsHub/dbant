@@ -16,11 +16,6 @@ It supports composer installation, with link **composer require vilshub/dbant**
 - Batch query execution with prepared statement support
 
 
-
-**Features to be included in v1.1.0**
-
-- User authenticator
-
 ## Demo
 **Single query execution**
 
