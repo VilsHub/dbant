@@ -18,9 +18,7 @@
      }
      private $dbHandler;
      private function isPrepared($query){
-        $positional = substr_count($query, "?");
-        $named = substr_count($query, ":");
-        if($positional > 0 || $named > 0){
+        if(preg_match("/=[ ]*\?/", $query) || preg_match("/=[ ]*:/", $query)){
           return true;
         }else {
           return false;
@@ -42,19 +40,29 @@
      private function runDirectQuery($query){
        $run =  $this->dbHandler->query($query);
        $testClassName = "PDOStatement";
+       $data = $run->fetchAll();
+        $records = count($data);
+        if($records == 0){
+          $parsedData = "";
+        }else if ($records == 1){
+          $parsedData = $data[0];
+        }else if($records > 1){
+          $parsedData = $data;
+        }
+
        if($run instanceof $testClassName){
          return array (
            "status"=>true,
            "rowCount"=>$run->rowCount(),
            "lastInsertId"=>$this->dbHandler->lastInsertId(),
-           "data"=>$run
+           "data"=>$parsedData
          );
        }else {
          return array(
            "status"=>true,
            "rowCount"=>$run->rowCount(),
            "lastInsertId"=>$this->dbHandler->lastInsertId(),
-           "data"=>$run
+           "data"=>$parsedData
          );
        }
      }
@@ -68,9 +76,7 @@
        }
 
        if($this->isPrepared($query)){
-         
          $preparedData = $this->preparedInfo($query);
-         
          try {
            if (!is_array($values)){// Array not passed
              throw new Exception("method argument 2 must be an array");
@@ -92,12 +98,24 @@
               //Execute
               $statement = $this->dbHandler->prepare($query);
               $run = $statement->execute($values);
+
               if($run){
+                $data = $statement->fetchAll();
+                $records = count($data);
+                if($records == 0){
+                  $parsedData = "";
+                }else if ($records == 1){
+                  $parsedData = $data[0];
+                }else if($records > 1){
+                  $parsedData = $data;
+                }
+
                 return array (
                   "status"=>$run,
                   "rowCount"=>$statement->rowCount(),
                   "lastInsertId"=>$this->dbHandler->lastInsertId(),
-                  "data"=>$run
+                  "data"=>$parsedData,
+                  "query"=>$query
                 );
               }else {
                 return array (
@@ -170,8 +188,20 @@
         }
      }
      public function exist($query, $value){
-       $status = $this->run($query, [$value]);
+       $status = $this->run($query, $value);
        return (int) $status["rowCount"] == 1?true:false;
+     }
+     public function tableExist($tableName){
+      $sql = "SHOW TABLES LIKE '{$tableName}'";
+      return $this->runDirectQuery($sql);
+     }
+     public function disableForeignKeyCheck(){
+      $sql = "SET FOREIGN_KEY_CHECKS = 0";
+      return $this->runDirectQuery($sql);
+     }
+     public function enableForeignKeyCheck(){
+      $sql = "SET FOREIGN_KEY_CHECKS = 1";
+      return $this->runDirectQuery($sql);
      }
      public function startTransaction(){
       $this->dbHandler->beginTransaction();
