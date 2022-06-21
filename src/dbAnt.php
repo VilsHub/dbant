@@ -16,6 +16,13 @@
      function __construct(\PDO $dbHandler){
        $this->dbHandler = $dbHandler;
      }
+     public function __get($propertyName){
+        switch ($propertyName) {
+          case 'link':
+            return $this->dbHandler;
+            break;
+        }
+     }
      private $dbHandler;
      private function isPrepared($query){
         if(preg_match("/=[ ]*\?/", $query) || preg_match("/=[ ]*:/", $query)){
@@ -74,7 +81,6 @@
        } catch (\Exception $e) {
          trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
        }
-
        if($this->isPrepared($query)){
          $preparedData = $this->preparedInfo($query);
          try {
