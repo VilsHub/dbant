@@ -217,8 +217,8 @@
     public function rollBack(){
       $this->dbHandler->rollBack();
     }
-    public function getRecord($sql){
-      $run = $this->run($sql);
+    public function getRecord($sql, $values=null){
+      $run = $this->run($sql, $values);
       return $run["rowCount"] > 0? $run["data"][0]:NULL;
     }
     public function totalRecords($sql){
