@@ -1,10 +1,10 @@
 <?php
   namespace vilshub\DBAnt;
-  use vilshub\helpers\Message;
   use vilshub\helpers\Get;
   use \Exception;
   use vilshub\helpers\Style;
-  use vilshub\helpers\TextProcessor;
+  use vilshub\validator\Validator;
+
   /**
    *
    */
@@ -13,9 +13,11 @@
     */
    class DBAnt
    {
+    private $dbHandler;
     function __construct(\PDO $dbHandler){
       $this->dbHandler = $dbHandler;
     }
+
     public function __get($propertyName){
       switch ($propertyName) {
         case 'link':
@@ -23,7 +25,7 @@
           break;
       }
     }
-    private $dbHandler;
+    
     private function isPrepared($query){
       if(preg_match("/=[ ]*\?/", $query) || preg_match("/=[ ]*:/", $query)){
         return true;
@@ -55,29 +57,30 @@
         $parsedData = $data;
       }
 
-      if($run instanceof $testClassName){
-        return array (
-          "status"=>true,
-          "rowCount"=>$run->rowCount(),
-          "lastInsertId"=>$this->dbHandler->lastInsertId(),
-          "data"=>$parsedData
-        );
-      }else {
-        return array(
-          "status"=>true,
-          "rowCount"=>$run->rowCount(),
-          "lastInsertId"=>$this->dbHandler->lastInsertId(),
-          "data"=>$parsedData
-        );
-      }
+      $returnData =  array(
+        "rowCount"=>$run->rowCount(),
+        "lastInsertId"=>$this->dbHandler->lastInsertId(),
+        "data"=>$parsedData,
+        "status" => $run->rowCount() > 0
+      );
+
+      // if($run instanceof $testClassName){
+      //   $returnData["status"] = true;
+      // }else {
+      //   $returnData["status"] = false;
+      // }
+
+
+      return $returnData;
     }
+
     public function run($query, $values=null){
       try {
         if(!is_string($query)){
           throw new Exception("method argument 1 must be a string");
         }
       } catch (\Exception $e) {
-        trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+        trigger_error(Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage());
       }
       if($this->isPrepared($query)){
         $preparedData = $this->preparedInfo($query);
@@ -130,7 +133,7 @@
             }
           }
         } catch (\Exception $e) {
-          trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+          trigger_error(Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage());
         }
       }else {
         return $this->runDirectQuery($query);
@@ -142,17 +145,19 @@
           throw new Exception("method argument 1 must be a string");
         }
       } catch (\Exception $e) {
-        trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+        trigger_error(Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage());
       }
 
       if($this->isPrepared($query)){
         $preparedData = $this->preparedInfo($query);
+
         try {
           if (!is_array($arrayOfValues)){// Array not passed
             throw new Exception("method argument 2 must be an array");
           }else {
             //Check if array is multi dimensional
             $total = count($arrayOfValues);
+
             for($x=0; $x<$total; $x++){
               if (!is_array($arrayOfValues[$x])){// Array not passed
                 throw new Exception("method argument 2 must be a 2 dimensional array of parent being index array");
@@ -160,6 +165,7 @@
             }
 
             $total =  count($arrayOfValues[0]);
+
             if ($total != $preparedData["valuePoints"]){
                 if ($total > $preparedData["valuePoints"]){
                   throw new Exception("supplied values is more than prepared value points");
@@ -175,17 +181,32 @@
 
                 //Execute
                 $statement = $this->dbHandler->prepare($query);
+                
                 //batch run prepared here
-
                 $total = count($arrayOfValues);
+                $this->startTransaction();
+                $status = true;
+
                 for ($x=0; $x<$total; $x++){
-                  $run = $statement->execute($arrayOfValues[$x]);
+
+                    $run = $statement->execute($arrayOfValues[$x]);
+                    if (!$run){
+                      $status = false;
+                    }
+                  
                 }
-                return array("status" => true);
+
+                if ($status == true){
+                  $this->endTransaction();
+                }else{
+                  $this->rollBack();
+                }
+
+                return array("status" => $status);
             }
           }
         } catch (\Exception $e) {
-          trigger_error(Message::write("error", Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage()));
+          trigger_error(Get::nonStaticMethod(__CLASS__, __FUNCTION__).$e->getMessage());
         }
       }
     }
@@ -195,7 +216,7 @@
     }
     public function tableExist($tableName){
       $sql = "SHOW TABLES LIKE '{$tableName}'";
-      return $this->runDirectQuery($sql);
+      return $this->runDirectQuery($sql)["status"];
     }
     public function disableForeignKeyCheck(){
       $sql = "SET FOREIGN_KEY_CHECKS = 0";
@@ -224,5 +245,66 @@
     public function totalRecords($sql){
       $run = $this->run($sql);
       return $run["rowCount"];
+    }
+    public function seed($tableName){
+      $msg =  " Invalid method argument value, ".Style::color(__CLASS__."->", "black").Style::color($tableName, "black")." value must be a string specifying the table name";
+      Validator::validateString($tableName, $msg);
+
+      //check if table exist
+      if (!$this->tableExist($tableName)){
+        trigger_error("The target table '$tableName' does not exist for seeding");
+        die;
+      }
+      
+      $body = new class ($this, $tableName){
+          private $db;
+          private $tableName = null;
+          public function __construct($db, $tableName) {
+             $this->db = $db;
+             $this->tableName = $tableName;
+          }
+          public function data($data, $recordSize){
+            $columnNames    = array_keys($data);
+            $preparedQuery  = $this->buildPreparedQuery($this->tableName, $columnNames);
+
+            //Execute query
+            for ($x=0; $x<$recordSize; $x++){
+              $record = $this->getRecord($data, $x);
+              $executeQuery = $this->db->batchRun($preparedQuery, [$record]);
+
+              if ($executeQuery["status"] == false){
+                trigger_error("Error occured while inserting the row with data: ". implode(", ", $record));
+                die;
+              }
+            }
+            
+            return  true;
+          }
+          
+          private function buildPreparedQuery($tableName, Array $columnNames){
+            $total = count($columnNames); $n = 0 ;
+      
+            $sqlPrepared = "INSERT INTO `$tableName` SET \n";
+            foreach ($columnNames as $columnName) {
+              $n++;
+              $eol = $n == $total?"":", ";
+              $sqlPrepared .= "`$columnName` = ?$eol";
+            }
+      
+            return $sqlPrepared;
+          }
+
+          private function getRecord($data, $index){
+            $row = [];
+            foreach ($data as $column) {
+              $row[] = $column[$index];
+            }
+
+            return $row;
+          }
+
+      };
+
+      return $body;
     }
    }
